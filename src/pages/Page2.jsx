@@ -3,7 +3,7 @@ import { UserService } from '../UserService';
 
 const Page2 = () => {
     const [amount, setAmount] = useState('1.00000000');
-    const [recipient, setRecipient] = useState('3dkrenderwax');
+    const [recipient, setRecipient] = useState('nightclub123');
 
     const onHandleSendWax = () => {
         if (!amount || isNaN(parseFloat(amount))) {
