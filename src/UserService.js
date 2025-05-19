@@ -9,16 +9,14 @@ import { setPlayerBalance, setPlayerData, setPlayerLogout } from './GlobalState/
 export class User {
   appName = 'ual_template';
 
-  // ----------- CONFIGURACIÓN TESTNET -----------
   myChain = {
-    chainId: 'f16b6e6b45a1e03cf45b17b1708ed9c89e9a3a81b8b697e2865b2a9b402c1e69', // TESTNET
+    chainId: 'f16b6e6b45a1e03cf45b17b1708ed9c89e9a3a81b8b697e2865b2a9b402c1e69',
     rpcEndpoints: [{
       protocol: 'https',
       host: 'testnet.wax.pink.gg',
       port: 443
     }]
   };
-  // ---------------------------------------------
 
   ual;
   authName = undefined;
@@ -74,7 +72,6 @@ export class User {
     }
   }
 
-  // --- NUEVA FUNCIÓN: Recarga ambos balances
   async reloadBalances() {
     await this.getBalance();
     await this.getSexyBalance();
@@ -108,7 +105,7 @@ export class User {
 
     try {
       const result = await this.session.rpc.get_currency_balance(
-        'nightclub.gm',      // Si tu contrato de tokens SEXY es otro, cámbialo aquí
+        'nightclub.gm',
         this.authName,
         'SEXY'
       );
@@ -122,7 +119,7 @@ export class User {
   }
 
   /**
-   * Transferir uno o varios NFTs de la colección 'nightclubcol', schema 'girls' a 'nightclub123' para staking.
+   * Transferir uno o varios NFTs a nightclub123 para staking.
    * @param {string[]} asset_ids
    */
   async stakeNFTs(asset_ids) {
@@ -138,9 +135,9 @@ export class User {
       }],
       data: {
         from: this.authName,
-        to: "nightclub123",    // Dirección de destino en testnet
+        to: "nightclub123",
         asset_ids: asset_ids,
-        memo: ""               // Memo vacío (opcional, pero algunos contratos requieren el campo aunque sea vacío)
+        memo: ""
       }
     }];
 
@@ -176,4 +173,4 @@ export class User {
   }
 }
 
-export const UserService = User.new(); // debe ser una instancia, no la clase User
+export const UserService = User.new();
