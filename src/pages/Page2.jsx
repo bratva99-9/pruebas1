@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserService } from '../UserService';
 
-export const Page2 = () => {
+const Page2 = () => {
+    const [amount, setAmount] = useState('1.00000000');
+    const [recipient, setRecipient] = useState('3dkrenderwax');
 
     const onHandleSendWax = () => {
+        if (!amount || isNaN(parseFloat(amount))) {
+            alert('Ingresa una cantidad válida.');
+            return;
+        }
+
         UserService.session.signTransaction(
             {
                 actions: [{
@@ -15,9 +22,9 @@ export const Page2 = () => {
                     }],
                     data: {
                         from: UserService.authName,
-                        to: '3dkrenderwax',
-                        quantity: '1.00000000 WAX',
-                        memo: 'This works!'
+                        to: recipient,
+                        quantity: `${parseFloat(amount).toFixed(8)} WAX`,
+                        memo: 'Transferencia personalizada'
                     }
                 }]
             },
@@ -28,22 +35,37 @@ export const Page2 = () => {
         ).then((response) => {
             if(response.status === 'executed') {
                 UserService.getBalance();
+                alert('Transacción enviada con éxito');
+            } else {
+                alert('Hubo un problema con la transacción.');
             }
+        }).catch((error) => {
+            alert('Error al enviar la transacción:', error.message);
         });
-
-        // Refund balance
     }
 
     return (
-        <div className="container">
-            <div className="row">
-                <div className="col-12">
-                    <h1 className="text-white text-center mt-5">Welcome to Page2</h1>
-                </div>
-                <div className="col-12 text-center">
-                    <button className="btn btn-success btn-lg" onClick={onHandleSendWax}>Send Wax</button>
-                </div>
-            </div>
+        <div className="container text-white text-center mt-5">
+            <h1>Transferencia Personalizada</h1>
+            <input 
+                className="form-control mt-3" 
+                type="text" 
+                placeholder="Cantidad de WAX" 
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+            />
+            <input 
+                className="form-control mt-3" 
+                type="text" 
+                placeholder="Cuenta destinataria" 
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+            />
+            <button className="btn btn-success btn-lg mt-3" onClick={onHandleSendWax}>
+                Enviar WAX
+            </button>
         </div>
     );
-}
+};
+
+export default Page2;

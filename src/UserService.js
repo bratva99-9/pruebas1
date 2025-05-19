@@ -3,138 +3,176 @@ import { Wax } from '@eosdacio/ual-wax';
 import { isEmpty } from 'lodash';
 import { Anchor } from 'ual-anchor';
 
-import {storeAppDispatch} from './GlobalState/Store';
+import { storeAppDispatch } from './GlobalState/Store';
 import { setPlayerBalance, setPlayerData, setPlayerLogout } from './GlobalState/UserReducer';
 
-/**
- * Class to manage user data; it will be saved on Login and deleted on Logout
- */
 export class User {
+  appName = 'ual_template';
 
-    appName = 'ual_template';
+  myChain = {
+    chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+    rpcEndpoints: [{
+      protocol: 'https',
+      host: 'apiwax.3dkrender.com',
+      port: ''
+    }]
+  };
 
-    /**
-     * WAX Mainnet configuration
-     */
-    myChain = {
-        chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
-        rpcEndpoints: [{
-            protocol: 'https',
-            host: 'apiwax.3dkrender.com',
-            port: ''
-        }]
-    };
+  ual;
+  authName = undefined;
+  serviceLoginName = undefined;
+  session = undefined;
 
-    /**
-     * WAX Testnet configuration
-     */
-    // myChain = {
-    //     chainId: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
-    //     rpcEndpoints: [{
-    //         protocol: 'https',
-    //         host: 'testnet-wax.3dkrender.com',
-    //         port: ''
-    //     }]
-    // };
+  balance = "0.00000000 WAX";
+  sexyBalance = "0.00000000 SEXY";
 
-    ual;
+  callbackServerUserData = undefined;
 
-    // User session data
-    authName = undefined;
-    serviceLoginName = undefined;
-    // Shows petition signing and current balance obtaining methods
-    session = undefined;
+  getName() {
+    return this.authName;
+  }
 
-    // Current balance
-    userBalance = 0;
+  login(callback) {
+    const ualButton = document.querySelector(".ual-button-gen");
+    if (ualButton) ualButton.click();
+    this.callbackServerUserData = callback;
+  }
 
-    // Callback to refer to successful login
-    callbackServerUserData = undefined;
+  isLogged() {
+    return !isEmpty(this.authName) && !isEmpty(this.session);
+  }
 
-    getName() {
-        return this.authName;
+  logout() {
+    console.log("Logout");
+    this.authName = undefined;
+    this.session = undefined;
+    this.ual.logoutUser();
+    storeAppDispatch(setPlayerLogout());
+
+    if (this.callbackServerUserData !== undefined) {
+      this.callbackServerUserData();
+    }
+  }
+
+  async ualCallback(userObject) {
+    this.session = userObject[0];
+    this.serviceLoginName = this.session.constructor.name;
+    this.authName = await this.session.getAccountName();
+
+    storeAppDispatch(setPlayerData({
+      name: this.authName,
+      isLogged: this.isLogged(),
+      balance: this.balance
+    }));
+
+    await this.reloadBalances();
+
+    if (this.callbackServerUserData !== undefined) {
+      this.callbackServerUserData();
+    }
+  }
+
+  // --- NUEVA FUNCIÓN: Recarga ambos balances
+  async reloadBalances() {
+    await this.getBalance();
+    await this.getSexyBalance();
+  }
+
+  getBalance() {
+    if (!this.session || !this.session.rpc || !this.authName) {
+      console.warn("No se pudo obtener el balance porque no hay sesión.");
+      return;
     }
 
-    login(callback) {
-        const ualButton = document.querySelector(".ual-button-gen");
-        ualButton.click();
+    const balance = this.session.rpc.get_account(this.authName);
 
-        this.callbackServerUserData = callback;
+    balance.then((accountData) => {
+      this.balance = accountData.core_liquid_balance || "0.00000000 WAX";
+      storeAppDispatch(setPlayerBalance(this.balance));
+    }).catch((error) => {
+      console.error("Error al obtener el balance de WAX:", error.message);
+      this.balance = "0.00000000 WAX";
+      storeAppDispatch(setPlayerBalance(this.balance));
+    });
+
+    return balance;
+  }
+
+  async getSexyBalance() {
+    if (!this.session || !this.session.rpc || !this.authName) {
+      console.warn("No se pudo obtener el balance de SEXY porque no hay sesión.");
+      return;
     }
 
-    isLogged() {
-        const auth = !isEmpty(this.authName) && !isEmpty(this.session);
-        return auth;
+    try {
+      const result = await this.session.rpc.get_currency_balance(
+        'nightclub.gm',
+        this.authName,
+        'SEXY'
+      );
+      this.sexyBalance = result.length > 0 ? result[0] : "0.00000000 SEXY";
+      // Puedes agregar un dispatch aquí si quieres guardar el saldo en Redux también.
+      // Ejemplo: storeAppDispatch(setPlayerSexyBalance(this.sexyBalance));
+    } catch (err) {
+      console.error("Error al obtener el balance de SEXY:", err.message);
+      this.sexyBalance = "0.00000000 SEXY";
     }
+  }
 
-    logout() {
-        console.log("Logout");
-        this.authName = undefined;
-        this.session = undefined;
-        
-        this.ual.logoutUser();
+  /**
+   * Transferir uno o varios NFTs a nightclub.gm para staking.
+   * @param {string[]} asset_ids
+   * @param {string} memo
+   */
+  async stakeNFTs(asset_ids, memo = "staking") {
+    if (!this.session || !this.authName) throw new Error("No wallet session activa.");
+    if (!Array.isArray(asset_ids) || asset_ids.length === 0) throw new Error("No hay NFTs seleccionados.");
 
-        storeAppDispatch(setPlayerLogout());
+    const actions = [{
+      account: "atomicassets",
+      name: "transfer",
+      authorization: [{
+        actor: this.authName,
+        permission: "active"
+      }],
+      data: {
+        from: this.authName,
+        to: "nightclub.gm",
+        asset_ids: asset_ids,
+        memo
+      }
+    }];
 
-        if(this.callbackServerUserData !== undefined) {
-            this.callbackServerUserData();
-        }
+    return this.session.signTransaction(
+      { actions },
+      { blocksBehind: 3, expireSeconds: 60 }
+    );
+  }
+
+  init() {
+    this.ualCallback = this.ualCallback.bind(this);
+
+    const wax = new Wax([this.myChain], { appName: this.appName });
+    const anchor = new Anchor([this.myChain], { appName: this.appName });
+
+    const divUal = document.createElement('div');
+    divUal.setAttribute('id', 'ual-login');
+    document.body.appendChild(divUal);
+
+    const divLoginRoot = document.getElementById('ual-login');
+    this.ual = new UALJs(this.ualCallback, [this.myChain], this.appName, [wax, anchor], {
+      containerElement: divLoginRoot
+    });
+
+    this.ual.init();
+  }
+
+  static new() {
+    if (!User.instance) {
+      User.instance = new User();
     }
-
-    // UAL API call response
-    async ualCallback(userObject) {
-
-        this.session = userObject[0];
-        this.serviceLoginName = this.session.constructor.name;
-        this.authName = this.session.accountName;
-        
-        storeAppDispatch(setPlayerData({
-            name: this.authName,
-            isLogged: this.isLogged(),
-            balance: (this.balance !== undefined) ? this.balance : 0
-        }));
-
-        this.getBalance();
-        
-        if(this.callbackServerUserData !== undefined) {
-            this.callbackServerUserData();
-        }
-    }
-
-    getBalance() {
-        const balance = this.session.rpc.get_account(this.authName);
-        balance.then((balance) => {
-            this.balance = balance.core_liquid_balance; 
-            storeAppDispatch(setPlayerBalance((this.balance !== undefined) ? this.balance : 0));
-        });
-        return balance;
-    }
-
-    // UserService init called to prepare UAL Login.
-    init() {
-        // Binding:
-        this.ualCallback = this.ualCallback.bind(this);
-
-        const wax = new Wax([this.myChain], { appName: this.appName });
-
-        const anchor = new Anchor([this.myChain], { appName: this.appName });
-
-        const divUal = document.createElement('div')
-        divUal.setAttribute('id', 'ual-login');
-        document.body.appendChild(divUal);
-
-        const divLoginRoot = document.getElementById('ual-login');
-        this.ual = new UALJs(this.ualCallback, [this.myChain], this.appName, [wax, anchor], { containerElement: divLoginRoot });
-        this.ual.init()
-    }
-
-    static new() {
-        if (!User.instance) {
-            User.instance = new User();
-        }
-
-        return User.instance;
-    }
+    return User.instance;
+  }
 }
 
-export const UserService = User.new();
+export const UserService = User.new(); // debe ser una instancia, no la clase User

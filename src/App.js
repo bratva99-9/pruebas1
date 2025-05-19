@@ -1,10 +1,14 @@
+// src/App.js
+
 import './App.scss';
 import { Menu } from './components/Menu';
 import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom';
-import { Home } from './pages/Home';
-import { Page2 } from './pages/Page2';
+import LandingPage from './pages/LandingPage';
+import Page2 from './pages/Page2';
+import Home from './pages/Home'; // SOLO UNA VEZ ESTA IMPORTACIÓN
 import ProtectedRoute from './ProtectedRoute';
-import { LandingPage } from './pages/LandingPage';
+import { Buffer } from "buffer";
+window.Buffer = Buffer;
 
 function App() {
   return (
@@ -15,7 +19,7 @@ function App() {
           <Route exact path="/" component={LandingPage} />
           <ProtectedRoute exact path="/page2" component={Page2} />
           <ProtectedRoute exact path="/home" component={Home} />
-          <Redirect to="/"  />
+          <Redirect to="/" />
         </Switch>
       </BrowserRouter>
     </div>
