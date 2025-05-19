@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { UserService } from '../UserService';
 
 const COLLECTION = "nightclubnft";
+const STAKE_SCHEMAS = ["girls", "photos"]; // Solo estos schemas
 
 const MyNFTs = () => {
   const [nfts, setNfts] = useState([]);
@@ -19,9 +20,15 @@ const MyNFTs = () => {
         return;
       }
       try {
-        const res = await fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
-        const data = await res.json();
-        setNfts(data.data || []);
+        // Trae solo schemas válidos (ambos)
+        const queries = STAKE_SCHEMAS.map(
+          schema => fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}&schema_name=${schema}&limit=100`)
+            .then(res => res.json())
+        );
+        const results = await Promise.all(queries);
+        // Une y filtra las respuestas
+        const nftsData = results.flatMap(r => Array.isArray(r.data) ? r.data : []);
+        setNfts(nftsData);
       } catch (err) {
         setNfts([]);
       }
@@ -42,36 +49,18 @@ const MyNFTs = () => {
     if (!UserService.session) return alert("Debes iniciar sesión.");
     if (selected.length === 0) return alert("Selecciona al menos un NFT.");
     try {
-      // Si WAX permite transferir varios en una sola tx, hazlo así:
-      const result = await UserService.session.signTransaction(
-        {
-          actions: [{
-            account: "atomicassets",
-            name: "transfer",
-            authorization: [{
-              actor: UserService.authName,
-              permission: "active",
-            }],
-            data: {
-              from: UserService.authName,
-              to: "nightclubfarm",
-              asset_ids: selected,
-              memo: UserService.authName,
-            }
-          }]
-        },
-        {
-          blocksBehind: 3,
-          expireSeconds: 60,
-        }
-      );
+      await UserService.stakeNFTs(selected); // Ahora la lógica es centralizada y correcta para mainnet
       alert(`NFT${selected.length > 1 ? 's' : ''} enviados a staking.`);
       setShowStaking(false);
       setSelected([]);
       // Recarga la lista de NFTs
-      const res = await fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
-      const data = await res.json();
-      setNfts(data.data || []);
+      const queries = STAKE_SCHEMAS.map(
+        schema => fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}&schema_name=${schema}&limit=100`)
+          .then(res => res.json())
+      );
+      const results = await Promise.all(queries);
+      const nftsData = results.flatMap(r => Array.isArray(r.data) ? r.data : []);
+      setNfts(nftsData);
     } catch (err) {
       alert("Error al enviar los NFTs: " + (err.message || err));
     }
@@ -79,7 +68,7 @@ const MyNFTs = () => {
 
   return (
     <div>
-      <h2 style={{color: "#fff", marginTop: 30}}>Tus NFTs</h2>
+      <h2 style={{color: "#fff", marginTop: 30}}>Tus NFTs Stakables</h2>
       <button
         style={{
           margin: "20px 0",
@@ -93,6 +82,7 @@ const MyNFTs = () => {
           cursor: "pointer"
         }}
         onClick={() => setShowStaking(!showStaking)}
+        disabled={nfts.length === 0}
       >
         Staking NFTs
       </button>
@@ -107,15 +97,20 @@ const MyNFTs = () => {
           marginBottom: 20,
           boxShadow: "0 6px 24px #000b",
         }}>
-          <h3 style={{color:"#fff"}}>Selec NFTs</h3>
+          <h3 style={{color:"#fff"}}>Selecciona los NFTs para Staking</h3>
           {loading ? <div>Cargando NFTs...</div> :
-            nfts.length === 0 ? <div>No tienes NFTs disponibles.</div> :
+            nfts.length === 0 ? <div>No tienes NFTs disponibles para staking.</div> :
             <div style={{display: 'flex', flexWrap: 'wrap', gap: 28}}>
               {nfts.map(nft => {
                 const vidHash = nft.data && nft.data.video;
-                const vidURL = vidHash && vidHash.length > 10
-                  ? (vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`)
-                  : '';
+                const imgHash = nft.data && nft.data.img;
+                const fileUrl =
+                  vidHash && vidHash.length > 10
+                    ? (vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`)
+                    : (imgHash && imgHash.length > 10
+                        ? (imgHash.startsWith("http") ? imgHash : `https://ipfs.io/ipfs/${imgHash}`)
+                        : '');
+
                 return (
                   <div
                     key={nft.asset_id}
@@ -126,11 +121,18 @@ const MyNFTs = () => {
                     }}
                     onClick={() => toggleSelect(nft.asset_id)}
                   >
-                    <video
-                      src={vidURL}
-                      style={{width:"100%", height:270, borderRadius:12, background:"#19191d"}}
-                      autoPlay loop muted playsInline
-                    />
+                    {fileUrl.endsWith('.mp4') || fileUrl.includes('video')
+                      ? <video
+                          src={fileUrl}
+                          style={{width:"100%", height:270, borderRadius:12, background:"#19191d"}}
+                          autoPlay loop muted playsInline
+                        />
+                      : <img
+                          src={fileUrl}
+                          alt="NFT"
+                          style={{width:"100%", height:270, borderRadius:12, background:"#19191d", objectFit:'cover'}}
+                        />
+                    }
                     <input
                       type="checkbox"
                       checked={selected.includes(nft.asset_id)}
@@ -155,6 +157,7 @@ const MyNFTs = () => {
               cursor: "pointer"
             }}
             onClick={stakeSelectedNFTs}
+            disabled={selected.length === 0}
           >
             Stakear seleccionados
           </button>
@@ -178,13 +181,18 @@ const MyNFTs = () => {
         </div>
       )}
 
-      {/* Aquí puedes dejar la vista de tus NFTs como siempre, sin el botón de staking en cada carta */}
+      {/* Galería sin el botón de staking en cada carta */}
       <div style={{display:'flex', flexWrap:'wrap', gap:28, marginTop:12}}>
         {nfts.map(nft => {
           const vidHash = nft.data && nft.data.video;
-          const vidURL = vidHash && vidHash.length > 10
-            ? (vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`)
-            : '';
+          const imgHash = nft.data && nft.data.img;
+          const fileUrl =
+            vidHash && vidHash.length > 10
+              ? (vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`)
+              : (imgHash && imgHash.length > 10
+                  ? (imgHash.startsWith("http") ? imgHash : `https://ipfs.io/ipfs/${imgHash}`)
+                  : '');
+
           return (
             <div
               key={nft.asset_id}
@@ -194,12 +202,18 @@ const MyNFTs = () => {
                 padding: 8, boxShadow: "0 2px 12px #000a", display:"flex", flexDirection:"column", alignItems:"center"
               }}
             >
-              <video
-                src={vidURL}
-                style={{width:"100%", height:270, borderRadius:12, background:"#19191d"}}
-                autoPlay loop muted playsInline
-              />
-              {/* No botón de staking aquí */}
+              {fileUrl.endsWith('.mp4') || fileUrl.includes('video')
+                ? <video
+                    src={fileUrl}
+                    style={{width:"100%", height:270, borderRadius:12, background:"#19191d"}}
+                    autoPlay loop muted playsInline
+                  />
+                : <img
+                    src={fileUrl}
+                    alt="NFT"
+                    style={{width:"100%", height:270, borderRadius:12, background:"#19191d", objectFit:'cover'}}
+                  />
+              }
             </div>
           );
         })}

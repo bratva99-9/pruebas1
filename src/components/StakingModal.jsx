@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { UserService } from "../UserService";
 
+const COLLECTION = "nightclubnft";
+const STAKE_SCHEMAS = ["girls", "photos"];
+
 export default function StakingModal() {
   const [nfts, setNfts] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -13,10 +16,16 @@ export default function StakingModal() {
   useEffect(() => {
     if (modalOpen && wallet) {
       setMensaje("Cargando NFTs...");
-      fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?collection_name=nightclubnft&owner=${wallet}&limit=100`)
-        .then(res => res.json())
-        .then(json => {
-          setNfts(Array.isArray(json.data) ? json.data : []);
+      // Trae NFTs solo de los schemas válidos
+      const queries = STAKE_SCHEMAS.map(
+        schema =>
+          fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?collection_name=${COLLECTION}&schema_name=${schema}&owner=${wallet}&limit=100`)
+            .then(res => res.json())
+      );
+      Promise.all(queries)
+        .then(results => {
+          const data = results.flatMap(r => Array.isArray(r.data) ? r.data : []);
+          setNfts(data);
           setMensaje("");
         })
         .catch(() => {
@@ -39,7 +48,7 @@ export default function StakingModal() {
     setLoading(true);
     setMensaje("Firmando transacción...");
     try {
-      await UserService.stakeNFTs(selected, "staking");
+      await UserService.stakeNFTs(selected); // Memo vacío por defecto
       setMensaje("¡Staking realizado con éxito!");
       setSelected([]);
       setTimeout(() => {
@@ -50,6 +59,14 @@ export default function StakingModal() {
       setMensaje("Hubo un error al firmar: " + (e.message || e));
     }
     setLoading(false);
+  };
+
+  const getMediaUrl = (nft) => {
+    let src = nft.data?.video || nft.data?.img;
+    if (!src) return null;
+    if (src.startsWith("Qm")) return `https://ipfs.io/ipfs/${src}`;
+    if (src.startsWith("http")) return src;
+    return null;
   };
 
   return (
@@ -76,21 +93,14 @@ export default function StakingModal() {
             {mensaje && (
               <div className="text-pink-400 mb-2">{mensaje}</div>
             )}
-            <div className="staking-grid max-h-[50vh] overflow-y-auto">
+            <div className="staking-grid max-h-[50vh] overflow-y-auto flex flex-wrap gap-4">
               {nfts.length === 0 && !mensaje && (
                 <div className="text-white col-span-4">No tienes NFTs para mostrar.</div>
               )}
               {nfts.map(nft => {
-                let videoSrc = nft.data?.video;
-                if (videoSrc && videoSrc.startsWith("Qm")) {
-                  videoSrc = `https://ipfs.io/ipfs/${videoSrc}`;
-                }
-                if (!videoSrc && nft.data?.img) {
-                  videoSrc = nft.data.img.startsWith("Qm")
-                    ? `https://ipfs.io/ipfs/${nft.data.img}`
-                    : nft.data.img;
-                }
-                if (!videoSrc) return null;
+                const mediaUrl = getMediaUrl(nft);
+                if (!mediaUrl) return null;
+                const isVideo = mediaUrl.endsWith('.mp4') || nft.data?.video;
                 return (
                   <div
                     key={nft.asset_id}
@@ -100,20 +110,34 @@ export default function StakingModal() {
                       (selected.includes(nft.asset_id) ? " selected" : "")
                     }
                   >
-                    <video
-                      src={videoSrc}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      style={{
-                        width: "112px",
-                        height: "200px", // proporción 9:16
-                        objectFit: "cover",
-                        borderRadius: "14px",
-                        background: "#000"
-                      }}
-                    />
+                    {isVideo ? (
+                      <video
+                        src={mediaUrl}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        style={{
+                          width: "112px",
+                          height: "200px", // proporción 9:16
+                          objectFit: "cover",
+                          borderRadius: "14px",
+                          background: "#000"
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={mediaUrl}
+                        alt="NFT"
+                        style={{
+                          width: "112px",
+                          height: "200px",
+                          objectFit: "cover",
+                          borderRadius: "14px",
+                          background: "#000"
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}

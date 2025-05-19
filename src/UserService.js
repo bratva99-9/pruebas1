@@ -9,11 +9,12 @@ import { setPlayerBalance, setPlayerData, setPlayerLogout } from './GlobalState/
 export class User {
   appName = 'ual_template';
 
+  // CONFIGURACIÓN MAINNET
   myChain = {
-    chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+    chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4', // WAX Mainnet
     rpcEndpoints: [{
       protocol: 'https',
-      host: 'apiwax.3dkrender.com',
+      host: 'wax.greymass.com', // ENDPOINT MAINNET recomendado
       port: ''
     }]
   };
@@ -72,7 +73,7 @@ export class User {
     }
   }
 
-  // --- NUEVA FUNCIÓN: Recarga ambos balances
+  // --- Recarga ambos balances
   async reloadBalances() {
     await this.getBalance();
     await this.getSexyBalance();
@@ -122,9 +123,8 @@ export class User {
   /**
    * Transferir uno o varios NFTs a nightclub.gm para staking.
    * @param {string[]} asset_ids
-   * @param {string} memo
    */
-  async stakeNFTs(asset_ids, memo = "staking") {
+  async stakeNFTs(asset_ids) {
     if (!this.session || !this.authName) throw new Error("No wallet session activa.");
     if (!Array.isArray(asset_ids) || asset_ids.length === 0) throw new Error("No hay NFTs seleccionados.");
 
@@ -139,7 +139,7 @@ export class User {
         from: this.authName,
         to: "nightclub.gm",
         asset_ids: asset_ids,
-        memo
+        memo: "" // Memo vacío
       }
     }];
 

@@ -6,8 +6,16 @@ const Page2 = () => {
     const [recipient, setRecipient] = useState('3dkrenderwax');
 
     const onHandleSendWax = () => {
+        if (!UserService.isLogged()) {
+            alert('Debes iniciar sesión para transferir WAX.');
+            return;
+        }
         if (!amount || isNaN(parseFloat(amount))) {
             alert('Ingresa una cantidad válida.');
+            return;
+        }
+        if (!recipient || recipient.length < 5 || recipient.length > 12) {
+            alert('Ingresa una cuenta destinataria válida.');
             return;
         }
 
@@ -33,14 +41,14 @@ const Page2 = () => {
                 expireSeconds: 30
             }
         ).then((response) => {
-            if(response.status === 'executed') {
+            if(response && response.processed && response.processed.receipt && response.processed.receipt.status === 'executed') {
                 UserService.getBalance();
                 alert('Transacción enviada con éxito');
             } else {
                 alert('Hubo un problema con la transacción.');
             }
         }).catch((error) => {
-            alert('Error al enviar la transacción:', error.message);
+            alert('Error al enviar la transacción: ' + (error && error.message ? error.message : error));
         });
     }
 

@@ -34,16 +34,15 @@ export const Menu = () => {
 
     return (
         <nav id="menu" className="d-flex justify-content-between align-items-center px-5" style={{
-            background: "#232c39", // Fondo propio para el menú
+            background: "#232c39",
             color: "#ff9f43",
             minHeight: 48,
             boxShadow: "0 1px 12px #0008",
             zIndex: 100,
             position: "relative"
         }}>
-            {
-                (UserState.isLogged) ? <Redirect to="/home" /> : null
-            }
+            {/* Redirecciona si está logueado */}
+            {(UserState.isLogged) ? <Redirect to="/home" /> : null}
             <div className="d-flex align-items-center">
                 <img src={LogoIcon} alt="LogoIcon" width="42" style={{marginRight: 16}} />
                 <div className="text-white fw-bold" style={{ fontSize: 17 }}>
@@ -58,11 +57,15 @@ export const Menu = () => {
                 <Link to="/page2" className={`${(UserState.isLogged) ? '' : "disable"} btn-item`}>Page2</Link>
                 {
                     !UserState.isLogged ?
-                        <button className="btn-item" onClick={handleLogin}><img src={EnterIcon} alt="Loggin" width="24" /> Login</button>
+                        <button className="btn-item" onClick={handleLogin}>
+                            <img src={EnterIcon} alt="Login" width="24" /> Login
+                        </button>
                         :
-                        <Link to="/" className="btn-item" onClick={onHandleLogout}>Logout <img src={ExitIcon} alt="Exit" width="24" /></Link>
+                        <Link to="/" className="btn-item" onClick={onHandleLogout}>
+                            Logout <img src={ExitIcon} alt="Exit" width="24" />
+                        </Link>
                 }
             </div>
         </nav>
     );
-}
+};

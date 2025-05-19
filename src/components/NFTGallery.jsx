@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { UserService } from "../UserService";
 
-// Utilidad para obtener la url del video
-const getVidUrl = (nft) => {
-  const vidHash = nft.data && nft.data.video;
-  if (!vidHash) return "";
-  return vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`;
+// Utilidad para obtener la url de video o imagen
+const getMediaUrl = (nft) => {
+  const vidHash = nft.data?.video;
+  const imgHash = nft.data?.img;
+  if (vidHash) return vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`;
+  if (imgHash) return imgHash.startsWith("http") ? imgHash : `https://ipfs.io/ipfs/${imgHash}`;
+  return "";
 };
 
-// Modal simple (puedes mejorar con una librería como React Modal)
+// Modal simple
 function Modal({ open, onClose, children }) {
   if (!open) return null;
   return (
@@ -36,7 +38,8 @@ function Modal({ open, onClose, children }) {
   );
 }
 
-const COLLECTION = "nightclubcol"; // <-- TESTNET collection
+const COLLECTION = "nightclubnft"; // Mainnet collection
+const STAKE_SCHEMAS = ["girls", "photos"];
 
 export default function NFTGallery() {
   const [nfts, setNfts] = useState([]);
@@ -45,7 +48,7 @@ export default function NFTGallery() {
   const [selected, setSelected] = useState([]);
   const [msg, setMsg] = useState("");
 
-  // Cargar NFTs del usuario
+  // Cargar NFTs del usuario (solo los schemas válidos)
   useEffect(() => {
     const fetchNFTs = async () => {
       setLoading(true);
@@ -55,10 +58,14 @@ export default function NFTGallery() {
         return;
       }
       try {
-        // ENDPOINT TESTNET y colección testnet
-        const res = await fetch(`https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
-        const data = await res.json();
-        setNfts(data.data || []);
+        // Busca ambos schemas, los une en un solo array
+        const queries = STAKE_SCHEMAS.map(schema =>
+          fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}&schema_name=${schema}&limit=100`)
+            .then(res => res.json())
+        );
+        const results = await Promise.all(queries);
+        const data = results.flatMap(r => Array.isArray(r.data) ? r.data : []);
+        setNfts(data);
       } catch (err) {
         setNfts([]);
       }
@@ -80,17 +87,20 @@ export default function NFTGallery() {
     if (selected.length === 0) return alert("Selecciona al menos un NFT.");
     setMsg("Firmando transacción...");
     try {
-      // Usa la función centralizada para asegurar la lógica correcta
       await UserService.stakeNFTs(selected);
       setMsg("¡NFTs enviados a staking exitosamente! 🎉");
       setShowStaking(false);
       setSelected([]);
       setTimeout(() => setMsg(""), 3000);
 
-      // Recarga NFTs desde testnet
-      const res = await fetch(`https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
-      const data = await res.json();
-      setNfts(data.data || []);
+      // Recarga NFTs desde mainnet
+      const queries = STAKE_SCHEMAS.map(schema =>
+        fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}&schema_name=${schema}&limit=100`)
+          .then(res => res.json())
+      );
+      const results = await Promise.all(queries);
+      const data = results.flatMap(r => Array.isArray(r.data) ? r.data : []);
+      setNfts(data);
     } catch (err) {
       setMsg("Error al stakear: " + (err.message || err));
     }
@@ -110,7 +120,7 @@ export default function NFTGallery() {
         </div>
         <div style={{color:"#ff36ba", fontWeight:"bold", fontSize:18}}>
           {UserService.authName && <span>{UserService.authName}</span>}
-          {/* Aquí puedes mostrar también los balances de WAX y SEXY */}
+          {/* Puedes mostrar balances aquí si quieres */}
         </div>
         <button
           style={{
@@ -119,6 +129,7 @@ export default function NFTGallery() {
             padding: "12px 32px", boxShadow: "0 2px 12px #7e47f799", cursor: "pointer"
           }}
           onClick={() => setShowStaking(true)}
+          disabled={nfts.length === 0}
         >
           <span role="img" aria-label="stake">💎</span> Staking NFTs
         </button>
@@ -142,7 +153,7 @@ export default function NFTGallery() {
         ) : nfts.length === 0 ? (
           <div style={{color: "#fff", fontSize: 20, gridColumn: "1/-1"}}>No tienes NFTs de esta colección.</div>
         ) : nfts.map(nft => {
-          const vidURL = getVidUrl(nft);
+          const mediaUrl = getMediaUrl(nft);
           return (
             <div key={nft.asset_id}
               style={{
@@ -156,15 +167,24 @@ export default function NFTGallery() {
               onMouseLeave={e => e.currentTarget.style.boxShadow = "0 6px 20px #0008"}
               onClick={() => setShowStaking(true)}
             >
-              <video
-                src={vidURL}
-                style={{
-                  width: "100%", height: 310, objectFit: "contain",
-                  background: "#19191d", borderRadius: "0 0 15px 15px", display:"block"
-                }}
-                autoPlay loop muted playsInline
-              />
-              {/* Puedes agregar más detalles abajo si quieres */}
+              {mediaUrl.endsWith('.mp4') || mediaUrl.includes('video')
+                ? <video
+                    src={mediaUrl}
+                    style={{
+                      width: "100%", height: 310, objectFit: "contain",
+                      background: "#19191d", borderRadius: "0 0 15px 15px", display:"block"
+                    }}
+                    autoPlay loop muted playsInline
+                  />
+                : <img
+                    src={mediaUrl}
+                    alt="NFT"
+                    style={{
+                      width: "100%", height: 310, objectFit: "cover",
+                      background: "#19191d", borderRadius: "0 0 15px 15px", display:"block"
+                    }}
+                  />
+              }
             </div>
           );
         })}
@@ -180,7 +200,7 @@ export default function NFTGallery() {
           {nfts.length === 0
             ? <div style={{color: "#fff"}}>No tienes NFTs.</div>
             : nfts.map(nft => {
-              const vidURL = getVidUrl(nft);
+              const mediaUrl = getMediaUrl(nft);
               return (
                 <div key={nft.asset_id}
                   style={{
@@ -193,14 +213,25 @@ export default function NFTGallery() {
                   }}
                   onClick={() => toggleSelect(nft.asset_id)}
                 >
-                  <video
-                    src={vidURL}
-                    style={{
-                      width:"100%", height:105, borderRadius:10, background:"#19191d",
-                      boxShadow: selected.includes(nft.asset_id) ? "0 0 8px #fff5" : undefined
-                    }}
-                    autoPlay loop muted playsInline
-                  />
+                  {mediaUrl.endsWith('.mp4') || mediaUrl.includes('video')
+                    ? <video
+                        src={mediaUrl}
+                        style={{
+                          width:"100%", height:105, borderRadius:10, background:"#19191d",
+                          boxShadow: selected.includes(nft.asset_id) ? "0 0 8px #fff5" : undefined
+                        }}
+                        autoPlay loop muted playsInline
+                      />
+                    : <img
+                        src={mediaUrl}
+                        alt="NFT"
+                        style={{
+                          width:"100%", height:105, borderRadius:10, background:"#19191d",
+                          boxShadow: selected.includes(nft.asset_id) ? "0 0 8px #fff5" : undefined,
+                          objectFit: "cover"
+                        }}
+                      />
+                  }
                   <input
                     type="checkbox"
                     checked={selected.includes(nft.asset_id)}
@@ -221,6 +252,7 @@ export default function NFTGallery() {
               padding: "12px 36px", marginRight:16, cursor:"pointer"
             }}
             onClick={stakeSelectedNFTs}
+            disabled={selected.length === 0}
           >Stakear seleccionados</button>
           <button
             style={{
