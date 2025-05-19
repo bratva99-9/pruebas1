@@ -36,7 +36,7 @@ function Modal({ open, onClose, children }) {
   );
 }
 
-const COLLECTION = "nightclubnft";
+const COLLECTION = "nightclubcol"; // <-- TESTNET collection
 
 export default function NFTGallery() {
   const [nfts, setNfts] = useState([]);
@@ -55,7 +55,8 @@ export default function NFTGallery() {
         return;
       }
       try {
-        const res = await fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
+        // ENDPOINT TESTNET y colección testnet
+        const res = await fetch(`https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
         const data = await res.json();
         setNfts(data.data || []);
       } catch (err) {
@@ -79,29 +80,17 @@ export default function NFTGallery() {
     if (selected.length === 0) return alert("Selecciona al menos un NFT.");
     setMsg("Firmando transacción...");
     try {
-      await UserService.session.signTransaction(
-        {
-          actions: [{
-            account: "atomicassets",
-            name: "transfer",
-            authorization: [{
-              actor: UserService.authName,
-              permission: "active",
-            }],
-            data: {
-              from: UserService.authName,
-              to: "nightclubfarm",
-              asset_ids: selected,
-              memo: UserService.authName,
-            }
-          }]
-        },
-        { blocksBehind: 3, expireSeconds: 60 }
-      );
+      // Usa la función centralizada para asegurar la lógica correcta
+      await UserService.stakeNFTs(selected);
       setMsg("¡NFTs enviados a staking exitosamente! 🎉");
       setShowStaking(false);
       setSelected([]);
       setTimeout(() => setMsg(""), 3000);
+
+      // Recarga NFTs desde testnet
+      const res = await fetch(`https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
+      const data = await res.json();
+      setNfts(data.data || []);
     } catch (err) {
       setMsg("Error al stakear: " + (err.message || err));
     }
