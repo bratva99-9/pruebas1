@@ -107,7 +107,7 @@ const MyNFTs = () => {
           marginBottom: 20,
           boxShadow: "0 6px 24px #000b",
         }}>
-          <h3 style={{color:"#fff"}}>Selecciona los NFTs que quieres stakear</h3>
+          <h3 style={{color:"#fff"}}>Selec NFTs</h3>
           {loading ? <div>Cargando NFTs...</div> :
             nfts.length === 0 ? <div>No tienes NFTs disponibles.</div> :
             <div style={{display: 'flex', flexWrap: 'wrap', gap: 28}}>
