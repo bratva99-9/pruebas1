@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserService } from '../UserService';
 
-const COLLECTION = "nightclubcol"; // Testnet collection name
+const COLLECTION = "nightclubcol"; // Mainnet collection name
 
 const MyNFTs = () => {
   const [nfts, setNfts] = useState([]);
@@ -9,7 +9,6 @@ const MyNFTs = () => {
   const [showStaking, setShowStaking] = useState(false);
   const [selected, setSelected] = useState([]);
 
-  // Traer NFTs del usuario
   useEffect(() => {
     const fetchNFTs = async () => {
       setLoading(true);
@@ -19,8 +18,7 @@ const MyNFTs = () => {
         return;
       }
       try {
-        // Cambiado a endpoint de TESTNET
-        const res = await fetch(`https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
+        const res = await fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
         const data = await res.json();
         setNfts(data.data || []);
       } catch (err) {
@@ -31,24 +29,38 @@ const MyNFTs = () => {
     fetchNFTs();
   }, [UserService.authName]);
 
-  // Maneja selección/deselección de NFTs
   const toggleSelect = (asset_id) => {
     setSelected(prev =>
       prev.includes(asset_id) ? prev.filter(id => id !== asset_id) : [...prev, asset_id]
     );
   };
 
-  // Stakear NFTs seleccionados
   const stakeSelectedNFTs = async () => {
     if (!UserService.session) return alert("Debes iniciar sesión.");
     if (selected.length === 0) return alert("Selecciona al menos un NFT.");
     try {
-      // USAR la función del UserService para enviar correctamente a nightclub123 sin memo
-      await UserService.stakeNFTs(selected);
+      await UserService.session.signTransaction(
+        {
+          actions: [{
+            account: "atomicassets",
+            name: "transfer",
+            authorization: [{
+              actor: UserService.authName,
+              permission: "active",
+            }],
+            data: {
+              from: UserService.authName,
+              to: "nightclubapp",
+              asset_ids: selected,
+              memo: UserService.authName,
+            }
+          }]
+        },
+        { blocksBehind: 3, expireSeconds: 60 }
+      );
       alert(`NFT${selected.length > 1 ? 's' : ''} enviados a staking.`);
       setShowStaking(false);
       setSelected([]);
-      // Recarga la lista de NFTs usando endpoint de TESTNET y colección correcta
       const res = await fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
       const data = await res.json();
       setNfts(data.data || []);
@@ -77,7 +89,6 @@ const MyNFTs = () => {
         Staking NFTs
       </button>
 
-      {/* Modal/sección de staking */}
       {showStaking && (
         <div style={{
           background: "#1a133a",
@@ -92,10 +103,14 @@ const MyNFTs = () => {
             nfts.length === 0 ? <div>No tienes NFTs disponibles.</div> :
             <div style={{display: 'flex', flexWrap: 'wrap', gap: 28}}>
               {nfts.map(nft => {
-                const vidHash = nft.data && nft.data.video;
-                const vidURL = vidHash && vidHash.length > 10
+                const vidHash = nft.data?.video;
+                const imgHash = nft.data?.img;
+                const fileUrl = vidHash && vidHash.length > 10
                   ? (vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`)
-                  : '';
+                  : (imgHash && imgHash.length > 10
+                    ? (imgHash.startsWith("http") ? imgHash : `https://ipfs.io/ipfs/${imgHash}`)
+                    : '');
+
                 return (
                   <div
                     key={nft.asset_id}
@@ -107,7 +122,7 @@ const MyNFTs = () => {
                     onClick={() => toggleSelect(nft.asset_id)}
                   >
                     <video
-                      src={vidURL}
+                      src={fileUrl}
                       style={{width:"100%", height:270, borderRadius:12, background:"#19191d"}}
                       autoPlay loop muted playsInline
                     />
@@ -157,31 +172,6 @@ const MyNFTs = () => {
           </button>
         </div>
       )}
-
-      <div style={{display:'flex', flexWrap:'wrap', gap:28, marginTop:12}}>
-        {nfts.map(nft => {
-          const vidHash = nft.data && nft.data.video;
-          const vidURL = vidHash && vidHash.length > 10
-            ? (vidHash.startsWith("http") ? vidHash : `https://ipfs.io/ipfs/${vidHash}`)
-            : '';
-          return (
-            <div
-              key={nft.asset_id}
-              style={{
-                width: 200, borderRadius: 16,
-                background: "#232848",
-                padding: 8, boxShadow: "0 2px 12px #000a", display:"flex", flexDirection:"column", alignItems:"center"
-              }}
-            >
-              <video
-                src={vidURL}
-                style={{width:"100%", height:270, borderRadius:12, background:"#19191d"}}
-                autoPlay loop muted playsInline
-              />
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 };
