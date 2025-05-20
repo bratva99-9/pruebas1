@@ -51,7 +51,7 @@ export default function Main() {
       }}
       className="main-blur-gallery"
     >
-      {/* Overlay del título, centro-centro */}
+      {/* Título centrado perfectamente */}
       <div
         style={{
           position: "absolute",
@@ -59,36 +59,35 @@ export default function Main() {
           top: "50%",
           transform: "translate(-50%, -50%)",
           zIndex: 10,
-          pointerEvents: "none"
+          pointerEvents: "none",
+          width: "100vw",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center"
         }}
       >
         <span
           style={{
             fontFamily: "'Pacifico', cursive, Arial",
-            fontSize: "5.2rem",
+            fontSize: "6.5vw", // Escalado responsivo
             color: "#ff36ba",
-            textShadow: "0 8px 42px #201028c8, 0 2px 7px #000c",
+            textShadow: "0 3px 24px #170415cc, 0 1.5px 8px #000c",
             letterSpacing: 2,
-            background: "rgba(32,18,48,0.25)",
-            borderRadius: 28,
-            padding: "20px 80px",
             userSelect: "none",
-            fontWeight: "bold",
-            border: "2.5px solid #ff36ba44",
-            boxShadow: "0 1.5px 22px #fff1"
+            fontWeight: "bold"
           }}
         >
           Night Club Game
         </span>
       </div>
 
-      {/* Grid de videos */}
+      {/* Grid de videos, sin bordes */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gridTemplateRows: "1fr",
-          gap: "20px",
+          gap: "24px",
           height: "100%",
           width: "100%",
           position: "absolute",
@@ -96,56 +95,45 @@ export default function Main() {
           left: 0,
           right: 0,
           bottom: 0,
-          padding: "36px 2vw 28px 2vw"
+          padding: "28px 2vw 28px 2vw",
+          background: "transparent"
         }}
       >
         {gallery.map((vid, idx) => (
           <div
             key={idx}
-            className="blur-video-container"
             style={{
               width: "100%",
               height: "100%",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              background: "none"
             }}
           >
             {vid ? (
-              <div
-                className="video-blur"
+              <video
+                src={vid}
+                autoPlay
+                muted
+                loop
+                playsInline
                 style={{
                   width: "100%",
+                  height: "100%",
                   aspectRatio: "9/16",
-                  borderRadius: "32px",
-                  boxShadow: "0 10px 38px #1f003788, 0 1.5px 10px #ff36ba40",
-                  overflow: "hidden",
-                  background: "#161425",
-                  position: "relative"
+                  objectFit: "cover",
+                  borderRadius: "32px", // Borde suave solo para elegancia
+                  transition: "filter 0.38s cubic-bezier(.22,1,.36,1)",
+                  filter: "blur(18px) brightness(0.85) saturate(1.1)"
                 }}
-              >
-                <video
-                  src={vid}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    borderRadius: "32px",
-                    transition: "filter 0.4s cubic-bezier(.22,1,.36,1), transform 0.28s cubic-bezier(.22,1,.36,1)",
-                    filter: "blur(20px) brightness(0.82) saturate(1.1)" // valor normal
-                  }}
-                  onMouseEnter={e =>
-                    (e.currentTarget.style.filter = "blur(10px) brightness(0.93) saturate(1.15)")
-                  }
-                  onMouseLeave={e =>
-                    (e.currentTarget.style.filter = "blur(20px) brightness(0.82) saturate(1.1)")
-                  }
-                />
-              </div>
+                onMouseEnter={e =>
+                  (e.currentTarget.style.filter = "blur(9px) brightness(1.03) saturate(1.13)")
+                }
+                onMouseLeave={e =>
+                  (e.currentTarget.style.filter = "blur(18px) brightness(0.85) saturate(1.1)")
+                }
+              />
             ) : (
               <div
                 style={{
