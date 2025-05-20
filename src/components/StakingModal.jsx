@@ -8,7 +8,7 @@ const SCHEMAS = [
 
 const COLLECTION = "nightclubnft";
 
-export default function StakingSection() {
+export default function StakingModal() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("girls");
   const [nfts, setNfts] = useState([]);
@@ -18,7 +18,7 @@ export default function StakingSection() {
 
   const wallet = UserService.isLogged() ? UserService.getName() : null;
 
-  // Traer NFTs por schema
+  // Cargar NFTs por schema
   useEffect(() => {
     if (modalOpen && wallet) {
       setMensaje("Cargando NFTs...");
@@ -47,7 +47,7 @@ export default function StakingSection() {
     );
   };
 
-  // Staking (y Unstaking temporalmente la misma función)
+  // Stake NFTs seleccionados
   const handleStake = async () => {
     if (!UserService.isLogged() || selected.length === 0) return;
     setLoading(true);
@@ -56,6 +56,7 @@ export default function StakingSection() {
       await UserService.stakeNFTs(selected, "");
       setMensaje("¡Staking realizado con éxito!");
       setSelected([]);
+      // Refresca la lista:
       setTimeout(() => {
         setModalOpen(false);
         setMensaje("");
@@ -66,30 +67,20 @@ export default function StakingSection() {
     setLoading(false);
   };
 
-  // Unstaking (usa la misma lógica de stake para pruebas)
+  // Unstake y Claim (solo placeholder, ¡debes conectar la lógica real!)
   const handleUnstake = async () => {
-    setLoading(true);
-    setMensaje("Firmando transacción...");
-    try {
-      await UserService.stakeNFTs(selected, "");
-      setMensaje("¡Unstake realizado! (Prueba)");
-      setSelected([]);
-      setTimeout(() => {
-        setModalOpen(false);
-        setMensaje("");
-      }, 1700);
-    } catch (e) {
-      setMensaje("Error al firmar: " + (e.message || e));
-    }
-    setLoading(false);
+    // TODO: Agregar lógica real de Unstake con el contrato
+    setMensaje("Función de Unstake no implementada aún.");
+    setTimeout(() => setMensaje(""), 1200);
   };
 
-  // Solo recordatorio visual, sin lógica real aún
-  const handleClaim = () => {
-    alert("Función de claim no implementada todavía. Aquí irá la lógica real en el futuro.");
+  const handleClaim = async () => {
+    // TODO: Agregar lógica real de Claim con el contrato
+    setMensaje("Función de Claim no implementada aún.");
+    setTimeout(() => setMensaje(""), 1200);
   };
 
-  // Estilo tabs
+  // Estilos tabs y botones
   const tabStyle = (tab) => ({
     padding: "10px 32px",
     borderRadius: "16px 16px 0 0",
@@ -107,33 +98,32 @@ export default function StakingSection() {
     transition: "all .19s"
   });
 
-  // ------ BOTONES EXTERNOS ------
   return (
-    <div>
-      <div style={{
-        display: "flex",
-        gap: 14,
-        marginTop: 26,
-        marginBottom: 26
-      }}>
+    <>
+      <div style={{display:"flex", alignItems:"center", gap:18, marginTop: 18}}>
         <button
           className="px-8 py-4 bg-pink-600 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-pink-500"
           onClick={() => setModalOpen(true)}
           disabled={!wallet}
+          style={{ marginBottom: 22 }}
         >
           Staking NFTs
         </button>
+        {/* --- BOTÓN UNSTAKE --- */}
         <button
-          className="px-8 py-4 bg-red-600 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-red-500"
+          className="px-8 py-4 bg-red-500 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-red-400"
+          style={{marginBottom:22}}
+          // Recuerda: conecta la lógica real cuando la tengas disponible
           onClick={handleUnstake}
-          disabled={!wallet || selected.length === 0}
         >
           Unstake
         </button>
+        {/* --- BOTÓN CLAIM --- */}
         <button
-          className="px-8 py-4 bg-cyan-400 text-black rounded-xl shadow-xl font-bold text-xl transition hover:bg-cyan-500"
+          className="px-8 py-4 bg-cyan-400 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-cyan-300"
+          style={{marginBottom:22}}
+          // Recuerda: conecta la lógica real cuando la tengas disponible
           onClick={handleClaim}
-          disabled={!wallet}
         >
           Claim
         </button>
@@ -145,8 +135,8 @@ export default function StakingSection() {
           background: "rgba(19,15,24,0.96)", display: "flex", alignItems: "center", justifyContent: "center"
         }}>
           <div style={{
-            background: "#201b2c", borderRadius: 24, minWidth: 380, minHeight: 300,
-            boxShadow: "0 10px 36px #000a", padding: 38, position: "relative", maxWidth: 700, width: "98vw"
+            background: "#201b2c", borderRadius: 24, minWidth: 380, minHeight: 320,
+            boxShadow: "0 10px 36px #000a", padding: 38, position: "relative", maxWidth: 740, width: "98vw"
           }}>
             {/* Cerrar */}
             <button
@@ -170,6 +160,7 @@ export default function StakingSection() {
                 </button>
               )}
             </div>
+
             {mensaje && (
               <div style={{
                 background: "#3b2548",
@@ -183,12 +174,12 @@ export default function StakingSection() {
                 minHeight: 42
               }}>{mensaje}</div>
             )}
-            {/* GALERÍA */}
+
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(170px,1fr))",
               gap: 24,
-              maxHeight: 340,
+              maxHeight: 400,
               overflowY: "auto",
               marginTop: 18
             }}>
@@ -213,8 +204,8 @@ export default function StakingSection() {
                     onClick={() => !loading && toggleSelect(nft.asset_id)}
                     style={{
                       border: selected.includes(nft.asset_id) ? `3px solid ${activeTab === "girls" ? "#ff36ba" : "#7e47f7"}` : "2px solid #252241",
-                      borderRadius: "28px",
-                      padding: 8,
+                      borderRadius: "24px",
+                      padding: 6,
                       background: selected.includes(nft.asset_id)
                         ? (activeTab === "girls"
                           ? "linear-gradient(135deg,#ff36ba30 60%,#fff0)"
@@ -222,10 +213,7 @@ export default function StakingSection() {
                         : "#131025",
                       cursor: "pointer",
                       boxShadow: selected.includes(nft.asset_id) ? "0 4px 18px #444a" : "0 2px 8px #1117",
-                      transition: "all .17s",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center"
+                      transition: "all .17s"
                     }}
                   >
                     <video
@@ -235,10 +223,10 @@ export default function StakingSection() {
                       loop
                       playsInline
                       style={{
-                        width: "108px",
-                        height: "192px",
+                        width: "100%",
+                        height: "310px", // Proporción 1080x1920
                         objectFit: "cover",
-                        borderRadius: "24px",
+                        borderRadius: "18px",
                         background: "#0c0c0e"
                       }}
                     />
@@ -246,17 +234,32 @@ export default function StakingSection() {
                       type="checkbox"
                       checked={selected.includes(nft.asset_id)}
                       onChange={() => toggleSelect(nft.asset_id)}
-                      style={{ marginTop: 7, width: 20, height: 20, accentColor: "#ff36ba" }}
+                      style={{ marginTop: 10, width: 22, height: 22, accentColor: "#ff36ba" }}
                       readOnly
                     /> <span style={{ color: "#eee" }}>Seleccionar</span>
                   </div>
                 );
               })}
             </div>
-            {/* NO BOTONES AQUÍ */}
+            <div style={{
+              display: "flex", justifyContent: "center", gap: 20, marginTop: 32, flexWrap: "wrap"
+            }}>
+              <button
+                style={{
+                  background: "linear-gradient(90deg,#ff36ba 30%,#7e47f7 100%)",
+                  color: "#fff", border: "none", borderRadius: 14,
+                  fontSize: 18, fontWeight: "bold", padding: "14px 38px",
+                  cursor: selected.length === 0 || loading ? "not-allowed" : "pointer",
+                  opacity: selected.length === 0 || loading ? 0.6 : 1,
+                  boxShadow: "0 2px 12px #7e47f799"
+                }}
+                onClick={handleStake}
+                disabled={selected.length === 0 || loading}
+              >Stakear seleccionados</button>
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
