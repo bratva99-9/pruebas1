@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { UserService } from "../UserService";
+import { JsonRpc } from "eosjs";
+
+const rpc = new JsonRpc("https://wax.greymass.com"); // MAINNET
 
 export default function StakingModal() {
   const [nfts, setNfts] = useState([]);
@@ -7,9 +10,33 @@ export default function StakingModal() {
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const [isRegistered, setIsRegistered] = useState(false);
 
   const wallet = UserService.isLogged() ? UserService.getName() : null;
 
+  // Verificar si el usuario está registrado
+  const checkRegistration = async (username) => {
+    try {
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: "nightclubapp",
+        scope: "nightclubapp",
+        table: "users",
+        lower_bound: username,
+        upper_bound: username,
+        limit: 1,
+      });
+      const found = result.rows.length > 0 && result.rows[0].user === username;
+      setIsRegistered(found);
+      return found;
+    } catch (err) {
+      console.error("Error al verificar registro:", err);
+      setIsRegistered(false);
+      return false;
+    }
+  };
+
+  // Cargar NFTs y verificar si está registrado
   useEffect(() => {
     if (modalOpen && wallet) {
       setMensaje("Cargando NFTs...");
@@ -23,6 +50,8 @@ export default function StakingModal() {
           setMensaje("Error al cargar tus NFTs");
           setNfts([]);
         });
+
+      checkRegistration(wallet);
     }
   }, [modalOpen, wallet]);
 
@@ -37,8 +66,35 @@ export default function StakingModal() {
   const handleStake = async () => {
     if (!UserService.isLogged() || selected.length === 0) return;
     setLoading(true);
-    setMensaje("Firmando transacción...");
+    setMensaje("Preparando transacción...");
+
     try {
+      // 1. Registrar si no está registrado
+      if (!isRegistered) {
+        setMensaje("Registrando usuario...");
+        await UserService.session.signTransaction(
+          {
+            actions: [{
+              account: "nightclubapp",
+              name: "regnewuser",
+              authorization: [{
+                actor: UserService.getName(),
+                permission: "active"
+              }],
+              data: {
+                user: UserService.getName(),
+                referrer: UserService.getName()
+              }
+            }]
+          },
+          { blocksBehind: 3, expireSeconds: 60 }
+        );
+        setIsRegistered(true); // evitar repetir
+        await new Promise(res => setTimeout(res, 1000));
+      }
+
+      // 2. Transferir NFTs
+      setMensaje("Enviando NFTs a staking...");
       await UserService.session.signTransaction(
         {
           actions: [{
@@ -58,6 +114,7 @@ export default function StakingModal() {
         },
         { blocksBehind: 3, expireSeconds: 60 }
       );
+
       setMensaje("¡Staking realizado con éxito!");
       setSelected([]);
       setTimeout(() => {
@@ -65,8 +122,9 @@ export default function StakingModal() {
         setMensaje("");
       }, 2000);
     } catch (e) {
-      setMensaje("Hubo un error al firmar: " + (e.message || e));
+      setMensaje("Error: " + (e.message || e));
     }
+
     setLoading(false);
   };
 
@@ -137,7 +195,9 @@ export default function StakingModal() {
               })}
             </div>
             <button
-              className={`mt-8 w-full py-3 bg-pink-600 text-white font-bold rounded-xl shadow-lg transition hover:bg-pink-500 ${selected.length === 0 || loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`mt-8 w-full py-3 bg-pink-600 text-white font-bold rounded-xl shadow-lg transition hover:bg-pink-500 ${
+                selected.length === 0 || loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
               onClick={handleStake}
               disabled={selected.length === 0 || loading}
             >
