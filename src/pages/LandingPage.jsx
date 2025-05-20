@@ -9,7 +9,6 @@ export default function Main() {
   const [gallery, setGallery] = useState(Array(CARD_COUNT).fill(null));
   const timerRef = useRef();
 
-  // Trae los videos de la colección de fotos (TESTNET + colección y schema correctos)
   useEffect(() => {
     fetch("https://wax.api.atomicassets.io/atomicassets/v1/assets?collection_name=nightclubcol&schema_name=photos&page=1&limit=100")
       .then(res => res.json())
@@ -25,7 +24,6 @@ export default function Main() {
       });
   }, []);
 
-  // Cambia solo un video cada 5 segundos
   useEffect(() => {
     if (!videos.length) return;
     timerRef.current = setInterval(() => {

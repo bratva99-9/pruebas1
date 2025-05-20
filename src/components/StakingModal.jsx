@@ -39,7 +39,25 @@ export default function StakingModal() {
     setLoading(true);
     setMensaje("Firmando transacción...");
     try {
-      await UserService.stakeNFTs(selected, "staking");
+      await UserService.session.signTransaction(
+        {
+          actions: [{
+            account: "atomicassets",
+            name: "transfer",
+            authorization: [{
+              actor: UserService.getName(),
+              permission: "active"
+            }],
+            data: {
+              from: UserService.getName(),
+              to: "nightclubapp",
+              asset_ids: selected,
+              memo: UserService.getName()
+            }
+          }]
+        },
+        { blocksBehind: 3, expireSeconds: 60 }
+      );
       setMensaje("¡Staking realizado con éxito!");
       setSelected([]);
       setTimeout(() => {
@@ -108,7 +126,7 @@ export default function StakingModal() {
                       playsInline
                       style={{
                         width: "112px",
-                        height: "200px", // proporción 9:16
+                        height: "200px",
                         objectFit: "cover",
                         borderRadius: "14px",
                         background: "#000"
@@ -119,9 +137,7 @@ export default function StakingModal() {
               })}
             </div>
             <button
-              className={`mt-8 w-full py-3 bg-pink-600 text-white font-bold rounded-xl shadow-lg transition hover:bg-pink-500 ${
-                selected.length === 0 || loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`mt-8 w-full py-3 bg-pink-600 text-white font-bold rounded-xl shadow-lg transition hover:bg-pink-500 ${selected.length === 0 || loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleStake}
               disabled={selected.length === 0 || loading}
             >
