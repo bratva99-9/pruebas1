@@ -8,19 +8,17 @@ const SCHEMAS = [
 
 const COLLECTION = "nightclubnft";
 
-export default function StakingModal() {
+export default function StakingSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("girls");
   const [nfts, setNfts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState([]);
   const [mensaje, setMensaje] = useState("");
-  const [claiming, setClaiming] = useState(false);
-  const [unstaking, setUnstaking] = useState(false);
 
   const wallet = UserService.isLogged() ? UserService.getName() : null;
 
-  // Cargar NFTs por schema
+  // Traer NFTs por schema
   useEffect(() => {
     if (modalOpen && wallet) {
       setMensaje("Cargando NFTs...");
@@ -49,7 +47,7 @@ export default function StakingModal() {
     );
   };
 
-  // Staking
+  // Staking (y Unstaking temporalmente la misma función)
   const handleStake = async () => {
     if (!UserService.isLogged() || selected.length === 0) return;
     setLoading(true);
@@ -58,7 +56,6 @@ export default function StakingModal() {
       await UserService.stakeNFTs(selected, "");
       setMensaje("¡Staking realizado con éxito!");
       setSelected([]);
-      // Refresca la lista:
       setTimeout(() => {
         setModalOpen(false);
         setMensaje("");
@@ -69,27 +66,30 @@ export default function StakingModal() {
     setLoading(false);
   };
 
-  // Unstaking (DEBES programar la lógica real aquí)
+  // Unstaking (usa la misma lógica de stake para pruebas)
   const handleUnstake = async () => {
-    setUnstaking(true);
-    setMensaje("Procesando unstake...");
-    setTimeout(() => {
-      setMensaje("Función de Unstake no implementada aún.");
-      setUnstaking(false);
-    }, 1500);
+    setLoading(true);
+    setMensaje("Firmando transacción...");
+    try {
+      await UserService.stakeNFTs(selected, "");
+      setMensaje("¡Unstake realizado! (Prueba)");
+      setSelected([]);
+      setTimeout(() => {
+        setModalOpen(false);
+        setMensaje("");
+      }, 1700);
+    } catch (e) {
+      setMensaje("Error al firmar: " + (e.message || e));
+    }
+    setLoading(false);
   };
 
-  // Claim (DEBES programar la lógica real aquí)
-  const handleClaim = async () => {
-    setClaiming(true);
-    setMensaje("Procesando claim...");
-    setTimeout(() => {
-      setMensaje("Función de Claim no implementada aún.");
-      setClaiming(false);
-    }, 1500);
+  // Solo recordatorio visual, sin lógica real aún
+  const handleClaim = () => {
+    alert("Función de claim no implementada todavía. Aquí irá la lógica real en el futuro.");
   };
 
-  // Estilos tabs y botones
+  // Estilo tabs
   const tabStyle = (tab) => ({
     padding: "10px 32px",
     borderRadius: "16px 16px 0 0",
@@ -107,16 +107,37 @@ export default function StakingModal() {
     transition: "all .19s"
   });
 
+  // ------ BOTONES EXTERNOS ------
   return (
-    <>
-      <button
-        className="px-8 py-4 bg-pink-600 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-pink-500 mb-8"
-        onClick={() => setModalOpen(true)}
-        disabled={!wallet}
-        style={{ marginTop: 12, marginBottom: 22 }}
-      >
-        Staking NFTs
-      </button>
+    <div>
+      <div style={{
+        display: "flex",
+        gap: 14,
+        marginTop: 26,
+        marginBottom: 26
+      }}>
+        <button
+          className="px-8 py-4 bg-pink-600 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-pink-500"
+          onClick={() => setModalOpen(true)}
+          disabled={!wallet}
+        >
+          Staking NFTs
+        </button>
+        <button
+          className="px-8 py-4 bg-red-600 text-white rounded-xl shadow-xl font-bold text-xl transition hover:bg-red-500"
+          onClick={handleUnstake}
+          disabled={!wallet || selected.length === 0}
+        >
+          Unstake
+        </button>
+        <button
+          className="px-8 py-4 bg-cyan-400 text-black rounded-xl shadow-xl font-bold text-xl transition hover:bg-cyan-500"
+          onClick={handleClaim}
+          disabled={!wallet}
+        >
+          Claim
+        </button>
+      </div>
 
       {modalOpen && (
         <div style={{
@@ -134,7 +155,7 @@ export default function StakingModal() {
                 position: "absolute", top: 18, right: 22, fontSize: 33, color: "#cfc", background: "none", border: "none",
                 cursor: "pointer", fontWeight: "bold", lineHeight: "1"
               }}
-              disabled={loading || claiming || unstaking}
+              disabled={loading}
             >&times;</button>
             {/* Tabs */}
             <div style={{ display: "flex", borderBottom: "2.5px solid #433f58", marginBottom: 18 }}>
@@ -149,7 +170,6 @@ export default function StakingModal() {
                 </button>
               )}
             </div>
-
             {mensaje && (
               <div style={{
                 background: "#3b2548",
@@ -163,10 +183,10 @@ export default function StakingModal() {
                 minHeight: 42
               }}>{mensaje}</div>
             )}
-
+            {/* GALERÍA */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(125px,1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))",
               gap: 24,
               maxHeight: 340,
               overflowY: "auto",
@@ -193,8 +213,8 @@ export default function StakingModal() {
                     onClick={() => !loading && toggleSelect(nft.asset_id)}
                     style={{
                       border: selected.includes(nft.asset_id) ? `3px solid ${activeTab === "girls" ? "#ff36ba" : "#7e47f7"}` : "2px solid #252241",
-                      borderRadius: "16px",
-                      padding: 6,
+                      borderRadius: "28px",
+                      padding: 8,
                       background: selected.includes(nft.asset_id)
                         ? (activeTab === "girls"
                           ? "linear-gradient(135deg,#ff36ba30 60%,#fff0)"
@@ -202,7 +222,10 @@ export default function StakingModal() {
                         : "#131025",
                       cursor: "pointer",
                       boxShadow: selected.includes(nft.asset_id) ? "0 4px 18px #444a" : "0 2px 8px #1117",
-                      transition: "all .17s"
+                      transition: "all .17s",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center"
                     }}
                   >
                     <video
@@ -212,10 +235,10 @@ export default function StakingModal() {
                       loop
                       playsInline
                       style={{
-                        width: "100%",
-                        height: "170px",
+                        width: "108px",
+                        height: "192px",
                         objectFit: "cover",
-                        borderRadius: "12px",
+                        borderRadius: "24px",
                         background: "#0c0c0e"
                       }}
                     />
@@ -230,58 +253,10 @@ export default function StakingModal() {
                 );
               })}
             </div>
-            <div style={{
-              display: "flex", justifyContent: "center", gap: 20, marginTop: 32, flexWrap: "wrap"
-            }}>
-              <button
-                style={{
-                  background: "linear-gradient(90deg,#ff36ba 30%,#7e47f7 100%)",
-                  color: "#fff", border: "none", borderRadius: 10,
-                  fontSize: 17, fontWeight: "bold", padding: "12px 36px",
-                  cursor: selected.length === 0 || loading ? "not-allowed" : "pointer",
-                  opacity: selected.length === 0 || loading ? 0.6 : 1,
-                  boxShadow: "0 2px 12px #7e47f799"
-                }}
-                onClick={handleStake}
-                disabled={selected.length === 0 || loading}
-              >Stakear seleccionados</button>
-
-              <button
-                style={{
-                  background: "#f43f5e", // rojo vibrante
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 17,
-                  fontWeight: "bold",
-                  padding: "12px 36px",
-                  cursor: unstaking ? "not-allowed" : "pointer",
-                  opacity: unstaking ? 0.6 : 1,
-                  boxShadow: "0 2px 8px #f43f5e99"
-                }}
-                onClick={handleUnstake}
-                disabled={unstaking}
-              >Unstake</button>
-              <button
-                style={{
-                  background: "linear-gradient(90deg,#5eead4 0%,#3b82f6 100%)",
-                  color: "#222",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 17,
-                  fontWeight: "bold",
-                  padding: "12px 36px",
-                  cursor: claiming ? "not-allowed" : "pointer",
-                  opacity: claiming ? 0.6 : 1,
-                  boxShadow: "0 2px 8px #22d3ee88"
-                }}
-                onClick={handleClaim}
-                disabled={claiming}
-              >Claim</button>
-            </div>
+            {/* NO BOTONES AQUÍ */}
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
