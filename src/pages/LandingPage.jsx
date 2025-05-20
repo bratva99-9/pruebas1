@@ -64,7 +64,7 @@ export default function Main() {
                   }}
                 />
               ) : (
-                <div className="loading">Cargando...</div>
+                <div className="loading">loading...</div>
               )}
             </div>
           ))}
