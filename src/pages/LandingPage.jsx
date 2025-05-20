@@ -11,7 +11,7 @@ export default function Main() {
 
   // Trae los videos de la colección de fotos (TESTNET + colección y schema correctos)
   useEffect(() => {
-    fetch("https://test.wax.api.atomicassets.io/atomicassets/v1/assets?collection_name=nightclubcol&schema_name=photos&page=1&limit=100")
+    fetch("https://wax.api.atomicassets.io/atomicassets/v1/assets?collection_name=nightclubcol&schema_name=photos&page=1&limit=100")
       .then(res => res.json())
       .then(json => {
         const vids = json.data

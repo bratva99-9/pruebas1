@@ -49,7 +49,7 @@ const MyNFTs = () => {
       setShowStaking(false);
       setSelected([]);
       // Recarga la lista de NFTs usando endpoint de TESTNET y colección correcta
-      const res = await fetch(`https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
+      const res = await fetch(`https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=${UserService.authName}&collection_name=${COLLECTION}`);
       const data = await res.json();
       setNfts(data.data || []);
     } catch (err) {
