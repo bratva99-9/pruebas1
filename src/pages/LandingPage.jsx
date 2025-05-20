@@ -5,83 +5,84 @@ const CARD_COUNT = 4;
 const CHANGE_INTERVAL = 5000; // 5 segundos
 
 export default function Main() {
-  const [media, setMedia] = useState([]); // media: video o img
+  const [videos, setVideos] = useState([]);
   const [gallery, setGallery] = useState(Array(CARD_COUNT).fill(null));
   const timerRef = useRef();
 
-  // Trae los videos/imágenes de la colección de fotos (mainnet)
+  // Trae los videos de la colección de fotos
   useEffect(() => {
     fetch("https://wax.api.atomicassets.io/atomicassets/v1/assets?collection_name=nightclubnft&schema_name=photos&page=1&limit=100")
       .then(res => res.json())
       .then(json => {
-        // Toma tanto videos como imágenes para mostrar
-        const files = json.data
+        const vids = json.data
           .map(a => a.data?.video || a.data?.img || null)
           .filter(Boolean)
           .map(ipfs =>
             ipfs.startsWith("Qm") ? `https://ipfs.io/ipfs/${ipfs}` : ipfs
           );
-        setMedia(files);
-        setGallery(Array(CARD_COUNT).fill(0).map(() => files[Math.floor(Math.random() * files.length)]));
+        setVideos(vids);
+        setGallery(Array(CARD_COUNT).fill(0).map(() => vids[Math.floor(Math.random() * vids.length)]));
       });
   }, []);
 
-  // Cambia solo un video/imagen cada 5 segundos
+  // Cambia solo un video cada 5 segundos
   useEffect(() => {
-    if (!media.length) return;
+    if (!videos.length) return;
     timerRef.current = setInterval(() => {
       setGallery(prev => {
         const idx = Math.floor(Math.random() * CARD_COUNT);
         const newGallery = [...prev];
-        let newItem;
+        let newVideo;
         do {
-          newItem = media[Math.floor(Math.random() * media.length)];
-        } while (newItem === newGallery[idx] && media.length > 1);
-        newGallery[idx] = newItem;
+          newVideo = videos[Math.floor(Math.random() * videos.length)];
+        } while (newVideo === newGallery[idx] && videos.length > 1);
+        newGallery[idx] = newVideo;
         return newGallery;
       });
     }, CHANGE_INTERVAL);
     return () => clearInterval(timerRef.current);
-  }, [media]);
+  }, [videos]);
 
   return (
     <div className="gigaland-home-container main-blur-gallery">
       <h1 className="gigaland-title titulo-rosado">Night Club Game</h1>
       <section className="gigaland-gallery-section">
-        <div className="gigaland-gallery-grid">
-          {gallery.map((file, idx) => (
-            <div key={idx} className="gallery-video-card">
-              {file ? (
-                file.endsWith('.mp4') || file.includes('video') ? (
-                  <video
-                    src={file}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "28px",
-                      background: "#000"
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={file}
-                    alt={`NFT ${idx}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "28px",
-                      background: "#000"
-                    }}
-                  />
-                )
+        <div className="gigaland-gallery-grid" style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "38px",
+          justifyContent: "center",
+          alignItems: "center",
+          marginTop: 32,
+        }}>
+          {gallery.map((vid, idx) => (
+            <div key={idx} className="gallery-video-card" style={{
+              borderRadius: 24,
+              overflow: "hidden",
+              background: "#201b2c",
+              boxShadow: "0 4px 24px #ff36ba22",
+              minHeight: 320,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              {vid ? (
+                <video
+                  src={vid}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  style={{
+                    width: "100%",
+                    height: "360px",
+                    objectFit: "cover",
+                    borderRadius: "24px",
+                    background: "#19191d",
+                  }}
+                />
               ) : (
-                <div className="loading">Cargando...</div>
+                <div className="loading" style={{ color: "#fff", fontSize: 24 }}>Cargando...</div>
               )}
             </div>
           ))}
